@@ -27,7 +27,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: spring-boot-jar
-        path: target/pkdt-ai_carebot_risk_detection_spring.jar
+        path: target/ai-carebot-risk-detection-spring-0.0.1-SNAPSHOT.jar
 
   deploy-test:
     runs-on: ubuntu-latest
@@ -54,7 +54,7 @@ jobs:
         SERVER_HOST="${{ secrets.HOST }}"
         SERVER_PORT="${{ secrets.SSH_PORT1 }}"
         DEPLOY_PATH="/home/deploy"
-        APP_NAME="pkdt-ai_carebot_risk_detection_spring"
+        APP_NAME="ai-carebot-risk-detection-spring-0.0.1-SNAPSHOT"
         JAR_FILE="$APP_NAME.jar"
 
         # 현재 시간으로 릴리스 폴더 생성 (예: /home/deploy/20231027103000)
