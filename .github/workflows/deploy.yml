@@ -104,6 +104,7 @@ jobs:
         # echo "--- Runner: SCP completed ---"
 
         ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 << EOF
+          set -eux # 디버깅
           echo "--- REMOTE SERVER SSH SESSION START ---"
           echo "--- REMOTE SERVER: Receiving variables from Runner ---"
           echo "  REMOTE DEPLOY_PATH: $DEPLOY_PATH"
