@@ -147,7 +147,7 @@ jobs:
           # 새로운 JAR 파일로 서비스 실행
           mkdir -p $DEPLOY_PATH/logs
           if [ $? -ne 0 ]; then echo "Error on server: Failed to create log directory $DEPLOY_PATH/logs"; exit 1; fi
-          echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $LOG_FILE 2>&1 &"
+          echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &"
           nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
           if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
           echo "--- REMOTE SERVER: Application started in background (nohup). ---"
