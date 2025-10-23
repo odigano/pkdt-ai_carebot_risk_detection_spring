@@ -5,10 +5,6 @@ on:
     branches:
       - deploy
 
-env:
-  JAR_NAME: my-spring-app # pom.xml의 artifactId와 일치해야 합니다.
-  DEPLOY_PATH: /home/deploy # 배포 경로 (서버에 맞게 수정)
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +21,7 @@ jobs:
         cache: 'maven' # Maven 캐싱 활성화 (빌드 속도 향상)
 
     - name: Build Spring Boot Application
-      run: mvn clean package -DskipTests # 테스트를 건너뛰고 Maven 빌드
+      run: mvn clean package -DskipTests
 
     - name: Upload build artifact
       uses: actions/upload-artifact@v4
@@ -45,41 +41,74 @@ jobs:
         name: spring-boot-jar
         path: ./spring-boot-jar
 
+    - name: Get Downloaded Jar File Name
+      id: get_jar_name
+      run: |
+        # 전체 경로 및 파일 확인
+        DOWNLOADED_PATH_FILE=$(find ./spring-boot-jar -name "*.jar" -print -quit)
+        if [ -z "$DOWNLOADED_PATH_FILE" ]; then
+          echo "Error: No JAR file found in ./spring-boot-jar"
+          exit 1
+        fi
+        # 전체 경로에서 파일명만 추출 후 저장
+        echo "JAR_FILENAME=$(basename "$DOWNLOADED_PATH_FILE")" >> $GITHUB_OUTPUT
+
     - name: Configure SSH
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -p ${{ secrets.SSH_PORT1 }} ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+        ssh-keyscan -p ${{ secrets.SSH_HOST1_PORT }} ${{ secrets.HOST1 }} >> ~/.ssh/known_hosts
 
     - name: Deploy via SSH
       run: |
-        SERVER_USER="${{ secrets.USERNAME }}"
-        SERVER_HOST="${{ secrets.HOST }}"
-        SERVER_PORT="${{ secrets.SSH_PORT1 }}"
+        USERNAME="${{ secrets.USERNAME }}"
+        HOST1="${{ secrets.HOST1 }}"
+        SSH_HOST1_PORT="${{ secrets.SSH_HOST1_PORT }}"
         DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-        APP_NAME="${{ vars.JAR_NAME }}"
-        JAR_FILE="$APP_NAME.jar"
+        JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
 
-        # 현재 시간으로 릴리스 폴더 생성 (예: /home/deploy/20231027103000)
+        # 현재 시간으로 릴리스 폴더 생성
         NEW_RELEASE_DIR="$DEPLOY_PATH/$(date +%Y%m%d%H%M%S)"
         
         # SCP로 JAR 파일 전송
-        # 다운로드된 아티팩트가 './spring-boot-jar' 경로에 jar 파일이 존재한다고 가정
-        scp -P $SERVER_PORT "./spring-boot-jar/$JAR_FILE" $SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/$JAR_FILE
+        scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
 
         # SSH로 서버에 접속하여 배포 스크립트 실행
-        ssh -p $SERVER_PORT $SERVER_USER@$SERVER_HOST << EOF
+        ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 << EOF
           mkdir -p $NEW_RELEASE_DIR
-          mv $DEPLOY_PATH/$JAR_FILE $NEW_RELEASE_DIR/$JAR_FILE
+          mv $DEPLOY_PATH/$JAR_FILENAME $NEW_RELEASE_DIR/$JAR_FILENAME
 
           # 심볼릭 링크 업데이트
           CURRENT_SYMLINK="$DEPLOY_PATH/current"
           ln -sfn $NEW_RELEASE_DIR $CURRENT_SYMLINK
 
           # 기존 자바 프로세스 종료
-          pgrep -f "java -jar $APP_NAME.jar" | xargs kill -9 || true
+          pgrep -f "java -jar $CURRENT_SYMLINK" | xargs kill -9 || true
+
+          # 기존 자바 프로세스 종료 (특정 JAR 파일 이름으로 검색)
+          PID=$(pgrep -f "java -jar $CURRENT_SYMLINK") 
+          if [ -n "$PID" ]; then
+            echo "Killing existing process (PID: $PID) with SIGTERM..."
+            kill -15 $PID
+            # 5초 대기하며 종료 확인
+            for i in {1..5}; do
+              if ! kill -0 $PID 2>/dev/null; then
+                echo "Process $PID terminated gracefully."
+                break
+              fi
+              sleep 1
+            done
+            # 5초 후에도 살아있으면 강제 종료
+            if kill -0 $PID 2>/dev/null; then
+              echo "Process $PID did not terminate gracefully, forcing kill with SIGKILL."
+              kill -9 $PID
+            fi
+          else
+            echo "No existing process found for $CURRENT_SYMLINK/*"
+          fi
 
           # 새로운 JAR 파일로 서비스 실행
-          nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILE > $DEPLOY_PATH/logs/$APP_NAME.log 2>&1 &
+          mkdir -p $DEPLOY_PATH/logs
+          nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
         EOF
