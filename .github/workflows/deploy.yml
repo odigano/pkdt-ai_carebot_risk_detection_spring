@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: test
 
     steps:
     - name: Checkout repository
@@ -27,7 +28,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: spring-boot-jar
-        path: target/${{ vars.JAR_NAME }}.jar
+        path: target/*.jar
 
   deploy-test:
     runs-on: ubuntu-latest
