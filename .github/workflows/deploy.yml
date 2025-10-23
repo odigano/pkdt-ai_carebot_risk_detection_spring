@@ -67,6 +67,7 @@ jobs:
         HOST1="${{ secrets.HOST1 }}"
         SSH_HOST1_PORT="${{ secrets.SSH_HOST1_PORT }}"
         DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
+        CURRENT_SYMLINK="$DEPLOY_PATH/current"
         # JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
         JAR_FILENAME="dump.jar"
 
@@ -82,7 +83,6 @@ jobs:
           mv $DEPLOY_PATH/$JAR_FILENAME $NEW_RELEASE_DIR/$JAR_FILENAME
 
           # 심볼릭 링크 업데이트
-          CURRENT_SYMLINK="$DEPLOY_PATH/current"
           echo "*** DEPLOY_PATH: $DEPLOY_PATH ***"
           echo "*** JAR_FILENAME: $JAR_FILENAME ***"
           echo "*** NEW_RELEASE_DIR: $NEW_RELEASE_DIR ***"
