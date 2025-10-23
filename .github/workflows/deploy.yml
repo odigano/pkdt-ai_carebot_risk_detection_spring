@@ -71,7 +71,7 @@ jobs:
         JAR_FILENAME="dump.jar"
 
         # 현재 시간으로 릴리스 폴더 생성
-        NEW_RELEASE_DIR="$DEPLOY_PATH/$(date +%Y%m%d%H%M%S)"
+        NEW_RELEASE_DIR="$DEPLOY_PATH/release/$(date +%Y%m%d%H%M%S)"
         
         # SCP로 JAR 파일 전송
         # scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
@@ -83,7 +83,10 @@ jobs:
 
           # 심볼릭 링크 업데이트
           CURRENT_SYMLINK="$DEPLOY_PATH/current"
-          echo "*** PRINT: $NEW_RELEASE_DIR // $CURRENT_SYMLINK ***"
+          echo "*** DEPLOY_PATH: $DEPLOY_PATH ***"
+          echo "*** JAR_FILENAME: $JAR_FILENAME ***"
+          echo "*** NEW_RELEASE_DIR: $NEW_RELEASE_DIR ***"
+          echo "*** CURRENT_SYMLINK: $CURRENT_SYMLINK ***"
           ln -sfn $NEW_RELEASE_DIR $CURRENT_SYMLINK
 
           # # 기존 자바 프로세스 종료
