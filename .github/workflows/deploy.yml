@@ -40,6 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment: test
+    env:
+      DB_URL: ${{ secrets.DB_URL }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     steps:
     - name: Download build artifact
@@ -87,8 +91,12 @@ jobs:
         echo "  Runner's SSH_HOST1_PORT: $SSH_HOST1_PORT"
         echo "  Runner's DEPLOY_PATH: $DEPLOY_PATH"
         echo "  Runner's CURRENT_SYMLINK: $CURRENT_SYMLINK"
-        echo "  Runner's JAR_FILENAME: $JAR_FILENAME"
         echo "  Runner's NEW_RELEASE_DIR: $NEW_RELEASE_DIR"
+        echo "  Runner's JAR_FILENAME: $JAR_FILENAME"
+
+        DB_URL="${{ env.DB_URL }}"
+        DB_USERNAME="${{ env.DB_USERNAME }}"
+        DB_PASSWORD="${{ env.DB_PASSWORD }}"
 
         # SCP로 JAR 파일 전송 (현재는 주석 처리됨)
         # echo "--- Runner: Attempting SCP ---"
@@ -144,13 +152,48 @@ jobs:
             echo "--- REMOTE SERVER: No existing process found for $CURRENT_SYMLINK ---"
           fi
 
-          # 새로운 JAR 파일로 서비스 실행
+          echo "--- REMOTE SERVER: Verifying no old Java processes are running. ---"
+          REMAINING_PIDS=\$(pgrep -f "java -jar $CURRENT_SYMLINK")
+          if [ -n "\$REMAINING_PIDS" ]; then
+            echo "Error on server: Old Java processes still running after termination attempt: \$REMAINING_PIDS"
+            exit 1
+          else
+            echo "--- REMOTE SERVER: All old Java processes for $CURRENT_SYMLINK successfully terminated. ---"
+          fi
+
           mkdir -p $DEPLOY_PATH/logs
           if [ $? -ne 0 ]; then echo "Error on server: Failed to create log directory $DEPLOY_PATH/logs"; exit 1; fi
+
+          export DB_URL="$DB_URL"
+          export DB_USERNAME="$DB_USERNAME"
+          export DB_PASSWORD="$DB_PASSWORD"
+
+          # 새로운 JAR 파일로 서비스 실행
           echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &"
           nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
           if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
-          echo "--- REMOTE SERVER: Application started in background (nohup). ---"
+
+          # 새로운 Java 서비스 실행 확인 (30초 이내)
+          echo "--- REMOTE SERVER: Verifying new application started successfully... ---"
+          APP_STARTED=false
+          for i in {1..3}; do # 5초 간격으로 3번 확인
+            NEW_PID=\$(pgrep -f "java -jar $CURRENT_SYMLINK")
+            if [ -n "\$NEW_PID" ]; then
+              echo "--- REMOTE SERVER: New application process found (PID: \$NEW_PID) after \$((i*5)) seconds. ---"
+              APP_STARTED=true
+              break
+            fi
+            echo "--- REMOTE SERVER: Waiting for new application to start... (\$i/3) ---"
+            sleep 5
+          done
+
+          if [ "\$APP_STARTED" = "false" ]; then
+            echo "Error on server: New application did not start successfully."
+            echo "  Check logs for more details: tail -n 50 $DEPLOY_PATH/logs/$JAR_FILENAME.log"
+            exit 1
+          else
+            echo "--- REMOTE SERVER: New application started successfully. PID: \$NEW_PID ---"
+          fi
           echo "--- REMOTE SERVER SSH SESSION END ---"
         EOF
 
