@@ -84,7 +84,7 @@ jobs:
         if [ $? -ne 0 ]; then echo "Error: Failed to transfer deploy script"; exit 1; fi
 
         # 2. JAR 파일을 원격 서버로 전송
-        scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$REMOTE_SCRIPT_PATH
+        scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
         if [ $? -ne 0 ]; then echo "Error: Failed to transfer JAR file"; exit 1; fi
 
         echo "--- DEPLOY JOB: Executing deploy script on remote server ---"
