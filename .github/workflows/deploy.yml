@@ -77,7 +77,7 @@ jobs:
         USERNAME="${{ secrets.USERNAME }}"
         HOST1="${{ secrets.HOST1 }}"
         SSH_HOST1_PORT="${{ secrets.SSH_HOST1_PORT }}"
-        DEPLOY_PATH="${{ vars.DEPLOY_PATH }}".
+        DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
         CURRENT_SYMLINK="$DEPLOY_PATH/current" 
         NEW_RELEASE_DIR="$DEPLOY_PATH/release/$(date +%Y%m%d%H%M%S)"
         JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
