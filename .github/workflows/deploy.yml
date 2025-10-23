@@ -98,13 +98,11 @@ jobs:
         DB_USERNAME="${{ env.DB_USERNAME }}"
         DB_PASSWORD="${{ env.DB_PASSWORD }}"
 
-        # SCP로 JAR 파일 전송 (현재는 주석 처리됨)
         # echo "--- Runner: Attempting SCP ---"
         scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
         if [ $? -ne 0 ]; then echo "Error: SCP failed"; exit 1; fi
         # echo "--- Runner: SCP completed ---"
 
-        # SSH로 서버에 접속하여 배포 스크립트 실행
         ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 << EOF
           echo "--- REMOTE SERVER SSH SESSION START ---"
           echo "--- REMOTE SERVER: Receiving variables from Runner ---"
@@ -130,7 +128,6 @@ jobs:
           if [ $? -ne 0 ]; then echo "Error on server: Failed to create/update symbolic link"; exit 1; fi
           echo "--- REMOTE SERVER: Symbolic link updated successfully. ---"
 
-          # 기존 자바 프로세스 종료 (Graceful Shutdown)
           echo "--- REMOTE SERVER: Checking for existing Java processes with $CURRENT_SYMLINK ---"
           PID=$(pgrep -f "java -jar $CURRENT_SYMLINK")
           if [ -n "$PID" ]; then
@@ -168,12 +165,10 @@ jobs:
           export DB_USERNAME="$DB_USERNAME"
           export DB_PASSWORD="$DB_PASSWORD"
 
-          # 새로운 JAR 파일로 서비스 실행
           echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &"
           nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
           if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
 
-          # 새로운 Java 서비스 실행 확인
           echo "--- REMOTE SERVER: Verifying new application started successfully... ---"
           APP_STARTED=false
           for i in {1..3}; do # 5초 간격으로 3번 확인
