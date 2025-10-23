@@ -72,16 +72,12 @@ jobs:
         DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
         JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
         
-        # Deploy 스크립트 경로 (저장소 내 경로)
         DEPLOY_SCRIPT_PATH=".github/scripts/deploy.sh" 
-        # 또는 path를 사용했다면 './deploy-scripts/.github/scripts/deploy.sh'
-
-        # 원격 서버의 임시 스크립트 경로 및 JAR 파일 경로
         REMOTE_SCRIPT_PATH="$DEPLOY_PATH/deploy_script.sh"
 
-        echo "--- DEPLOY JOB: Transferring deploy script and JAR to remote server ---"
-        # 쉘 스크립트 실행 권한 부여
         chmod +x "$DEPLOY_SCRIPT_PATH"
+
+        echo "--- DEPLOY JOB: Transferring deploy script and JAR to remote server ---"
         
         # 1. 쉘 스크립트를 원격 서버로 전송
         scp -P $SSH_HOST1_PORT "$DEPLOY_SCRIPT_PATH" $USERNAME@$HOST1:$REMOTE_SCRIPT_PATH
