@@ -6,53 +6,53 @@ on:
       - deploy
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    environment: test
+  # build:
+  #   runs-on: ubuntu-latest
+  #   environment: test
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v5
+  #   steps:
+  #   - name: Checkout repository
+  #     uses: actions/checkout@v5
 
-    - name: Set up Java 21 with Maven
-      uses: actions/setup-java@v5
-      with:
-        distribution: 'temurin' # Adoptium Temurin
-        java-version: '21'
-        cache: 'maven' # Maven 캐싱 활성화 (빌드 속도 향상)
+  #   - name: Set up Java 21 with Maven
+  #     uses: actions/setup-java@v5
+  #     with:
+  #       distribution: 'temurin' # Adoptium Temurin
+  #       java-version: '21'
+  #       cache: 'maven' # Maven 캐싱 활성화 (빌드 속도 향상)
 
-    - name: Build Spring Boot Application
-      run: mvn clean package -DskipTests
+  #   - name: Build Spring Boot Application
+  #     run: mvn clean package -DskipTests
 
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: spring-boot-jar
-        path: target/*.jar
+  #   - name: Upload build artifact
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: spring-boot-jar
+  #       path: target/*.jar
 
   deploy-test:
     runs-on: ubuntu-latest
-    needs: build
+    # needs: build
     environment: test
 
     steps:
-    - name: Download build artifact
-      uses: actions/download-artifact@v5
-      with:
-        name: spring-boot-jar
-        path: ./spring-boot-jar
+    # - name: Download build artifact
+    #   uses: actions/download-artifact@v5
+    #   with:
+    #     name: spring-boot-jar
+    #     path: ./spring-boot-jar
 
-    - name: Get Downloaded Jar File Name
-      id: get_jar_name
-      run: |
-        # 전체 경로 및 파일 확인
-        DOWNLOADED_PATH_FILE=$(find ./spring-boot-jar -name "*.jar" -print -quit)
-        if [ -z "$DOWNLOADED_PATH_FILE" ]; then
-          echo "Error: No JAR file found in ./spring-boot-jar"
-          exit 1
-        fi
-        # 전체 경로에서 파일명만 추출 후 저장
-        echo "JAR_FILENAME=$(basename "$DOWNLOADED_PATH_FILE")" >> $GITHUB_OUTPUT
+    # - name: Get Downloaded Jar File Name
+    #   id: get_jar_name
+    #   run: |
+    #     # 전체 경로 및 파일 확인
+    #     DOWNLOADED_PATH_FILE=$(find ./spring-boot-jar -name "*.jar" -print -quit)
+    #     if [ -z "$DOWNLOADED_PATH_FILE" ]; then
+    #       echo "Error: No JAR file found in ./spring-boot-jar"
+    #       exit 1
+    #     fi
+    #     # 전체 경로에서 파일명만 추출 후 저장
+    #     echo "JAR_FILENAME=$(basename "$DOWNLOADED_PATH_FILE")" >> $GITHUB_OUTPUT
 
     - name: Configure SSH
       run: |
@@ -67,13 +67,14 @@ jobs:
         HOST1="${{ secrets.HOST1 }}"
         SSH_HOST1_PORT="${{ secrets.SSH_HOST1_PORT }}"
         DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-        JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
+        # JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
+        JAR_FILENAME="dump.jar"
 
         # 현재 시간으로 릴리스 폴더 생성
         NEW_RELEASE_DIR="$DEPLOY_PATH/$(date +%Y%m%d%H%M%S)"
         
         # SCP로 JAR 파일 전송
-        scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
+        # scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
 
         # SSH로 서버에 접속하여 배포 스크립트 실행
         ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 << EOF
@@ -82,34 +83,35 @@ jobs:
 
           # 심볼릭 링크 업데이트
           CURRENT_SYMLINK="$DEPLOY_PATH/current"
+          echo "*** PRINT: $NEW_RELEASE_DIR // $CURRENT_SYMLINK ***"
           ln -sfn $NEW_RELEASE_DIR $CURRENT_SYMLINK
 
-          # 기존 자바 프로세스 종료
-          pgrep -f "java -jar $CURRENT_SYMLINK" | xargs kill -9 || true
+          # # 기존 자바 프로세스 종료
+          # pgrep -f "java -jar $CURRENT_SYMLINK" | xargs kill -9 || true
 
-          # 기존 자바 프로세스 종료 (특정 JAR 파일 이름으로 검색)
-          PID=$(pgrep -f "java -jar $CURRENT_SYMLINK") 
-          if [ -n "$PID" ]; then
-            echo "Killing existing process (PID: $PID) with SIGTERM..."
-            kill -15 $PID
-            # 5초 대기하며 종료 확인
-            for i in {1..5}; do
-              if ! kill -0 $PID 2>/dev/null; then
-                echo "Process $PID terminated gracefully."
-                break
-              fi
-              sleep 1
-            done
-            # 5초 후에도 살아있으면 강제 종료
-            if kill -0 $PID 2>/dev/null; then
-              echo "Process $PID did not terminate gracefully, forcing kill with SIGKILL."
-              kill -9 $PID
-            fi
-          else
-            echo "No existing process found for $CURRENT_SYMLINK/*"
-          fi
+          # # 기존 자바 프로세스 종료 (특정 JAR 파일 이름으로 검색)
+          # PID=$(pgrep -f "java -jar $CURRENT_SYMLINK") 
+          # if [ -n "$PID" ]; then
+          #   echo "Killing existing process (PID: $PID) with SIGTERM..."
+          #   kill -15 $PID
+          #   # 5초 대기하며 종료 확인
+          #   for i in {1..5}; do
+          #     if ! kill -0 $PID 2>/dev/null; then
+          #       echo "Process $PID terminated gracefully."
+          #       break
+          #     fi
+          #     sleep 1
+          #   done
+          #   # 5초 후에도 살아있으면 강제 종료
+          #   if kill -0 $PID 2>/dev/null; then
+          #     echo "Process $PID did not terminate gracefully, forcing kill with SIGKILL."
+          #     kill -9 $PID
+          #   fi
+          # else
+          #   echo "No existing process found for $CURRENT_SYMLINK/*"
+          # fi
 
-          # 새로운 JAR 파일로 서비스 실행
-          mkdir -p $DEPLOY_PATH/logs
-          nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
+          # # 새로운 JAR 파일로 서비스 실행
+          # mkdir -p $DEPLOY_PATH/logs
+          # nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
         EOF
