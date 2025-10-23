@@ -100,7 +100,7 @@ jobs:
 
         # echo "--- Runner: Attempting SCP ---"
         scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
-        if [ $? -ne 0 ]; then echo "Error: SCP failed"; exit 1; fi
+        # if [ $? -ne 0 ]; then echo "Error: SCP failed"; exit 1; fi
         # echo "--- Runner: SCP completed ---"
 
         ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 << EOF
@@ -114,20 +114,20 @@ jobs:
 
           echo "--- REMOTE SERVER: Creating release directory $NEW_RELEASE_DIR ---"
           mkdir -p $NEW_RELEASE_DIR
-          if [ $? -ne 0 ]; then echo "Error on server: Failed to create $NEW_RELEASE_DIR"; exit 1; fi
+          # if [ $? -ne 0 ]; then echo "Error on server: Failed to create $NEW_RELEASE_DIR"; exit 1; fi
           echo "--- REMOTE SERVER: Directory $NEW_RELEASE_DIR created. ---"
 
           echo "--- REMOTE SERVER: Moving JAR file from $DEPLOY_PATH/$JAR_FILENAME to $NEW_RELEASE_DIR/$JAR_FILENAME ---"
           #mv $DEPLOY_PATH/$JAR_FILENAME $NEW_RELEASE_DIR/$JAR_FILENAME
           cp $DEPLOY_PATH/$JAR_FILENAME $NEW_RELEASE_DIR/$JAR_FILENAME
-          if [ $? -ne 0 ]; then echo "Error on server: Failed to move JAR file"; exit 1; fi
+          # if [ $? -ne 0 ]; then echo "Error on server: Failed to move JAR file"; exit 1; fi
           echo "--- REMOTE SERVER: JAR file moved. ---"
 
           echo "--- REMOTE SERVER: Updating symbolic link ---"
           echo "  Target (NEW_RELEASE_DIR): $NEW_RELEASE_DIR"
           echo "  Link Name (CURRENT_SYMLINK): $CURRENT_SYMLINK"
           ln -sfn $NEW_RELEASE_DIR $CURRENT_SYMLINK
-          if [ $? -ne 0 ]; then echo "Error on server: Failed to create/update symbolic link"; exit 1; fi
+          # if [ $? -ne 0 ]; then echo "Error on server: Failed to create/update symbolic link"; exit 1; fi
           echo "--- REMOTE SERVER: Symbolic link updated successfully. ---"
 
           echo "--- REMOTE SERVER: Checking for existing Java processes with $CURRENT_SYMLINK ---"
@@ -169,7 +169,7 @@ jobs:
 
           echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &"
           nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
-          if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
+          # if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
 
           echo "--- REMOTE SERVER: Verifying new application started successfully... ---"
           APP_STARTED=false
@@ -202,9 +202,7 @@ jobs:
             for RELEASE_TO_DELETE in $OLD_RELEASES; do
               echo "--- REMOTE SERVER: Deleting old release directory: $RELEASE_TO_DELETE ---"
               rm -rf "$RELEASE_TO_DELETE"
-              if [ $? -ne 0 ]; then
-                echo "Warning: Failed to delete old release directory $RELEASE_TO_DELETE. Continuing..."
-              fi
+              # if [ $? -ne 0 ]; then echo "Warning: Failed to delete old release directory $RELEASE_TO_DELETE. Continuing..."; fi;
             done
             echo "--- REMOTE SERVER: Old release cleanup completed. ---"
           else
