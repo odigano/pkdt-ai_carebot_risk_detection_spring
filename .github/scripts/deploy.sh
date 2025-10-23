@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux # 명령 실패 시 즉시 종료, 실행 명령 출력
+set -eux # 명령 실패 시 즉시 종료, 실행 명령 출력 (디버깅에 매우 유용)
 
 REMOTE_DEPLOY_PATH="$1"
 REMOTE_JAR_FILENAME="$2"
@@ -9,26 +9,29 @@ REMOTE_DB_PASSWORD="$5"
 
 NEW_RELEASE_DIR="$REMOTE_DEPLOY_PATH/release/$(date +%Y%m%d%H%M%S)"
 CURRENT_SYMLINK="$REMOTE_DEPLOY_PATH/current"
+APP_IDENTIFIER="java -jar $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME"
 
 echo "--- REMOTE SERVER SCRIPT START ---"
 echo "  Received DEPLOY_PATH: $REMOTE_DEPLOY_PATH"
 echo "  Received JAR_FILENAME: $REMOTE_JAR_FILENAME"
+echo "  New release directory: $NEW_RELEASE_DIR"
+echo "  Current symlink target: $CURRENT_SYMLINK"
 
 echo "--- REMOTE SERVER: Creating release directory $NEW_RELEASE_DIR ---"
 mkdir -p "$NEW_RELEASE_DIR"
 
-echo "--- REMOTE SERVER: Moving JAR file to $NEW_RELEASE_DIR/$REMOTE_JAR_FILENAME ---"
+echo "--- REMOTE SERVER: Moving JAR file from $REMOTE_DEPLOY_PATH/$REMOTE_JAR_FILENAME to $NEW_RELEASE_DIR/$REMOTE_JAR_FILENAME ---"
 mv "$REMOTE_DEPLOY_PATH/$REMOTE_JAR_FILENAME" "$NEW_RELEASE_DIR/$REMOTE_JAR_FILENAME"
 
-echo "--- REMOTE SERVER: Updating symbolic link ---"
+echo "--- REMOTE SERVER: Updating symbolic link to $NEW_RELEASE_DIR ---"
 ln -sfn "$NEW_RELEASE_DIR" "$CURRENT_SYMLINK"
 
-echo "--- REMOTE SERVER: Checking for existing Java processes with $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME ---"
-PID=$(pgrep -f "java -jar $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME")
+echo "--- REMOTE SERVER: Checking for existing Java processes with '$APP_IDENTIFIER' ---"
+PID=$(pgrep -f "$APP_IDENTIFIER")
 if [ -n "$PID" ]; then
   echo "--- REMOTE SERVER: Found existing process (PID: $PID). Attempting graceful shutdown (SIGTERM)... ---"
   kill -15 "$PID"
-  for i in {1..5}; do
+  for i in {1..5}; do # 5초 대기
     if ! kill -0 "$PID" 2>/dev/null; then
       echo "--- REMOTE SERVER: Process $PID terminated gracefully. ---"
       break
@@ -36,37 +39,40 @@ if [ -n "$PID" ]; then
     echo "--- REMOTE SERVER: Waiting for process $PID to terminate... ($i/5) ---"
     sleep 1
   done
+
+  # SIGTERM 후에도 프로세스가 살아있는지 최종 확인 (set -e 오류 방지)
   if kill -0 "$PID" 2>/dev/null; then
     echo "--- REMOTE SERVER: Process $PID did not terminate gracefully, forcing kill with SIGKILL. ---"
     kill -9 "$PID"
   fi
 else
-  echo "--- REMOTE SERVER: No existing process found for $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME ---"
+  echo "--- REMOTE SERVER: No existing process found for '$APP_IDENTIFIER' ---"
 fi
 
 echo "--- REMOTE SERVER: Verifying no old Java processes are running. ---"
-REMAINING_PIDS=$(pgrep -f "java -jar $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME")
+REMAINING_PIDS=$(pgrep -f "$APP_IDENTIFIER")
 if [ -n "$REMAINING_PIDS" ]; then
   echo "Error on server: Old Java processes still running after termination attempt: $REMAINING_PIDS"
   exit 1
 else
-  echo "--- REMOTE SERVER: All old Java processes for $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME successfully terminated. ---"
+  echo "--- REMOTE SERVER: All old Java processes for '$APP_IDENTIFIER' successfully terminated. ---"
 fi
 
+echo "--- REMOTE SERVER: Creating log directory $REMOTE_DEPLOY_PATH/logs ---"
 mkdir -p "$REMOTE_DEPLOY_PATH/logs"
 
 export DB_URL="$REMOTE_DB_URL"
 export DB_USERNAME="$REMOTE_DB_USERNAME"
 export DB_PASSWORD="$REMOTE_DB_PASSWORD"
 
-echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME > $REMOTE_DEPLOY_PATH/logs/$REMOTE_JAR_FILENAME.log 2>&1 &"
+echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $APP_IDENTIFIER > $REMOTE_DEPLOY_PATH/logs/$REMOTE_JAR_FILENAME.log 2>&1 &"
 nohup /usr/bin/java -jar "$CURRENT_SYMLINK/$REMOTE_JAR_FILENAME" > "$REMOTE_DEPLOY_PATH/logs/$REMOTE_JAR_FILENAME.log" 2>&1 &
 
 echo "--- REMOTE SERVER: Verifying new application started successfully... ---"
 APP_STARTED=false
-for i in {1..3}; do
+for i in {1..3}; do # 5초 간격으로 3번 확인 (총 15초)
   sleep 5
-  NEW_PID=$(pgrep -f "java -jar $CURRENT_SYMLINK/$REMOTE_JAR_FILENAME")
+  NEW_PID=$(pgrep -f "$APP_IDENTIFIER")
   if [ -n "$NEW_PID" ]; then
     echo "--- REMOTE SERVER: New application process found (PID: $NEW_PID) after ($((i*5))) seconds. ---"
     APP_STARTED=true
@@ -84,7 +90,8 @@ else
 fi
 
 echo "--- REMOTE SERVER: Starting old release cleanup ---"
-CURRENT_RELEASE_TARGET=$(readlink -f "$CURRENT_SYMLINK" || echo "")
+CURRENT_RELEASE_TARGET=$(readlink -f "$CURRENT_SYMLINK" || echo "") 
+
 if [ -z "$CURRENT_RELEASE_TARGET" ]; then
   echo "Warning: Could not determine current release target for cleanup. Skipping old release cleanup."
 else
