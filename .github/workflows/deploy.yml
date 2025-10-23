@@ -27,7 +27,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: spring-boot-jar
-        path: target/ai-carebot-risk-detection-spring-0.0.1-SNAPSHOT.jar
+        path: target/${{ env.JAR_NAME }}.jar
 
   deploy-test:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
       uses: actions/download-artifact@v5
       with:
         name: spring-boot-jar
-        path: ./spring-boot-jar # 다운로드 경로는 파일 그 자체 (디렉토리가 아님)
+        path: ./spring-boot-jar
 
     - name: Configure SSH
       run: |
@@ -53,34 +53,29 @@ jobs:
         SERVER_USER="${{ secrets.USERNAME }}"
         SERVER_HOST="${{ secrets.HOST }}"
         SERVER_PORT="${{ secrets.SSH_PORT1 }}"
-        DEPLOY_PATH="/home/deploy"
-        APP_NAME="ai-carebot-risk-detection-spring-0.0.1-SNAPSHOT"
+        DEPLOY_PATH="${{ env.DEPLOY_PATH }}"
+        APP_NAME="${{ env.JAR_NAME }}"
         JAR_FILE="$APP_NAME.jar"
 
         # 현재 시간으로 릴리스 폴더 생성 (예: /home/deploy/20231027103000)
         NEW_RELEASE_DIR="$DEPLOY_PATH/$(date +%Y%m%d%H%M%S)"
         
         # SCP로 JAR 파일 전송
-        # 다운로드된 아티팩트가 './spring-boot-jar' 경로에 'my-spring-boot-app.jar' 형태로 존재한다고 가정
-        scp -P $SERVER_PORT "./spring-boot-jar/$JAR_FILE" $SERVER_USER@$SERVER_HOST:/home/deploy/$JAR_FILE
+        # 다운로드된 아티팩트가 './spring-boot-jar' 경로에 jar 파일이 존재한다고 가정
+        scp -P $SERVER_PORT "./spring-boot-jar/$JAR_FILE" $SERVER_USER@$SERVER_HOST:$DEPLOY_PATH/$JAR_FILE
 
         # SSH로 서버에 접속하여 배포 스크립트 실행
         ssh -p $SERVER_PORT $SERVER_USER@$SERVER_HOST << EOF
           mkdir -p $NEW_RELEASE_DIR
-          mv /home/deploy/$JAR_FILE $NEW_RELEASE_DIR/$JAR_FILE
-          echo "New release deployed to $NEW_RELEASE_DIR"
+          mv $DEPLOY_PATH/$JAR_FILE $NEW_RELEASE_DIR/$JAR_FILE
 
           # 심볼릭 링크 업데이트
           CURRENT_SYMLINK="$DEPLOY_PATH/current"
           ln -sfn $NEW_RELEASE_DIR $CURRENT_SYMLINK
-          echo "Symlink updated to $CURRENT_SYMLINK"
 
-          # 서비스 재시작 (Docker 컨테이너 내부에서 nohup 사용 시)
-          # 기존 자바 프로세스 종료 (컨테이너 내에 Java 프로세스가 하나만 있다고 가정)
+          # 기존 자바 프로세스 종료
           pgrep -f "java -jar $APP_NAME.jar" | xargs kill -9 || true
-          echo "Previous Java process killed."
 
           # 새로운 JAR 파일로 서비스 실행
           nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILE > $DEPLOY_PATH/logs/$APP_NAME.log 2>&1 &
-          echo "New service started via nohup."
         EOF
