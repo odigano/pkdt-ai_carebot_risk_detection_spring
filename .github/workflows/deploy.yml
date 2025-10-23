@@ -68,7 +68,9 @@ jobs:
       run: |
         USERNAME="${{ secrets.USERNAME }}"
         HOST1="${{ secrets.HOST1 }}"
+        HOST2="${{ secrets.HOST2 }}"
         SSH_HOST1_PORT="${{ secrets.SSH_HOST1_PORT }}"
+        SSH_HOST2_PORT="${{ secrets.SSH_HOST2_PORT }}"
         DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
         JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
         
@@ -82,14 +84,20 @@ jobs:
         # 1. 쉘 스크립트를 원격 서버로 전송
         scp -P $SSH_HOST1_PORT "$DEPLOY_SCRIPT_PATH" $USERNAME@$HOST1:$REMOTE_SCRIPT_PATH
         if [ $? -ne 0 ]; then echo "Error: Failed to transfer deploy script"; exit 1; fi
+        scp -P $SSH_HOST2_PORT "$DEPLOY_SCRIPT_PATH" $USERNAME@$HOST2:$REMOTE_SCRIPT_PATH
+        if [ $? -ne 0 ]; then echo "Error: Failed to transfer deploy script"; exit 1; fi
 
         # 2. JAR 파일을 원격 서버로 전송
         scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
+        if [ $? -ne 0 ]; then echo "Error: Failed to transfer JAR file"; exit 1; fi
+        scp -P $SSH_HOST2_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST2:$DEPLOY_PATH/$JAR_FILENAME
         if [ $? -ne 0 ]; then echo "Error: Failed to transfer JAR file"; exit 1; fi
 
         echo "--- DEPLOY JOB: Executing deploy script on remote server ---"
         # 3. 원격 서버에서 쉘 스크립트 실행 (인자 전달)
         ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 "bash \"$REMOTE_SCRIPT_PATH\" \"$DEPLOY_PATH\" \"$JAR_FILENAME\" \"${{ secrets.DB_URL }}\" \"${{ secrets.DB_USERNAME }}\" \"${{ secrets.DB_PASSWORD }}\""
+        if [ $? -ne 0 ]; then echo "Error: Remote deploy script failed"; exit 1; fi
+        ssh -p $SSH_HOST2_PORT $USERNAME@$HOST2 "bash \"$REMOTE_SCRIPT_PATH\" \"$DEPLOY_PATH\" \"$JAR_FILENAME\" \"${{ secrets.DB_URL }}\" \"${{ secrets.DB_USERNAME }}\" \"${{ secrets.DB_PASSWORD }}\""
         if [ $? -ne 0 ]; then echo "Error: Remote deploy script failed"; exit 1; fi
         
         echo "--- DEPLOY JOB END ---"
