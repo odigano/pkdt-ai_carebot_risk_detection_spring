@@ -6,115 +6,152 @@ on:
       - deploy
 
 jobs:
-  # build:
-  #   runs-on: ubuntu-latest
-  #   environment: test
-
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v5
-
-  #   - name: Set up Java 21 with Maven
-  #     uses: actions/setup-java@v5
-  #     with:
-  #       distribution: 'temurin' # Adoptium Temurin
-  #       java-version: '21'
-  #       cache: 'maven' # Maven 캐싱 활성화 (빌드 속도 향상)
-
-  #   - name: Build Spring Boot Application
-  #     run: mvn clean package -DskipTests
-
-  #   - name: Upload build artifact
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: spring-boot-jar
-  #       path: target/*.jar
-
-  deploy-test:
+  build:
     runs-on: ubuntu-latest
-    # needs: build
     environment: test
 
     steps:
-    # - name: Download build artifact
-    #   uses: actions/download-artifact@v5
-    #   with:
-    #     name: spring-boot-jar
-    #     path: ./spring-boot-jar
+    - name: Checkout repository
+      uses: actions/checkout@v5
 
-    # - name: Get Downloaded Jar File Name
-    #   id: get_jar_name
-    #   run: |
-    #     # 전체 경로 및 파일 확인
-    #     DOWNLOADED_PATH_FILE=$(find ./spring-boot-jar -name "*.jar" -print -quit)
-    #     if [ -z "$DOWNLOADED_PATH_FILE" ]; then
-    #       echo "Error: No JAR file found in ./spring-boot-jar"
-    #       exit 1
-    #     fi
-    #     # 전체 경로에서 파일명만 추출 후 저장
-    #     echo "JAR_FILENAME=$(basename "$DOWNLOADED_PATH_FILE")" >> $GITHUB_OUTPUT
+    - name: Set up Java 21 with Maven
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin' # Adoptium Temurin
+        java-version: '21'
+        cache: 'maven' # Maven 캐싱 활성화 (빌드 속도 향상)
+
+    - name: Build Spring Boot Application
+      run: |
+        echo "--- BUILD JOB: Starting Maven Build ---"
+        mvn clean package -DskipTests
+        echo "--- BUILD JOB: Maven Build Completed ---"
+        echo "--- BUILD JOB: Listing target directory contents after build ---"
+        ls -al target/
+        echo "--- BUILD JOB: Finished listing target directory ---"
+
+    - name: Upload build artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: spring-boot-jar
+        path: target/*.jar
+
+  deploy-test:
+    runs-on: ubuntu-latest
+    needs: build
+    environment: test
+
+    steps:
+    - name: Download build artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: spring-boot-jar
+        path: ./spring-boot-jar
+
+    - name: Get Downloaded Jar File Name
+      id: get_jar_name
+      run: |
+        # 전체 경로 및 파일 확인
+        DOWNLOADED_PATH_FILE=$(find ./spring-boot-jar -name "*.jar" -print -quit)
+        if [ -z "$DOWNLOADED_PATH_FILE" ]; then
+          echo "Error: No JAR file found in ./spring-boot-jar"
+          exit 1
+        fi
+        echo "Found JAR file path on Runner: $DOWNLOADED_PATH_FILE"
+        # 전체 경로에서 파일명만 추출 후 저장
+        echo "JAR_FILENAME=$(basename "$DOWNLOADED_PATH_FILE")" >> $GITHUB_OUTPUT
 
     - name: Configure SSH
       run: |
+        echo "--- DEPLOY JOB: Configure SSH Step ---"
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -p ${{ secrets.SSH_HOST1_PORT }} ${{ secrets.HOST1 }} >> ~/.ssh/known_hosts
+        echo "SSH configuration complete on Runner."
 
     - name: Deploy via SSH
       run: |
+        echo "--- DEPLOY JOB: Deploy via SSH Step (on Runner) ---"
+        echo "--- Runner-side Variables before SSH command ---"
         USERNAME="${{ secrets.USERNAME }}"
         HOST1="${{ secrets.HOST1 }}"
         SSH_HOST1_PORT="${{ secrets.SSH_HOST1_PORT }}"
-        DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
-        CURRENT_SYMLINK="$DEPLOY_PATH/current"
-        # JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
-        JAR_FILENAME="dump.jar"
-
-        # 현재 시간으로 릴리스 폴더 생성
+        DEPLOY_PATH="${{ vars.DEPLOY_PATH }}".
+        CURRENT_SYMLINK="$DEPLOY_PATH/current" 
         NEW_RELEASE_DIR="$DEPLOY_PATH/release/$(date +%Y%m%d%H%M%S)"
-        
-        # SCP로 JAR 파일 전송
-        # scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
+        JAR_FILENAME="${{ steps.get_jar_name.outputs.JAR_FILENAME }}"
+
+        echo "  Runner's USERNAME: $USERNAME"
+        echo "  Runner's HOST1: $HOST1"
+        echo "  Runner's SSH_HOST1_PORT: $SSH_HOST1_PORT"
+        echo "  Runner's DEPLOY_PATH: $DEPLOY_PATH"
+        echo "  Runner's CURRENT_SYMLINK: $CURRENT_SYMLINK"
+        echo "  Runner's JAR_FILENAME: $JAR_FILENAME"
+        echo "  Runner's NEW_RELEASE_DIR: $NEW_RELEASE_DIR"
+
+        # SCP로 JAR 파일 전송 (현재는 주석 처리됨)
+        # echo "--- Runner: Attempting SCP ---"
+        scp -P $SSH_HOST1_PORT "./spring-boot-jar/$JAR_FILENAME" $USERNAME@$HOST1:$DEPLOY_PATH/$JAR_FILENAME
+        if [ $? -ne 0 ]; then echo "Error: SCP failed"; exit 1; fi
+        # echo "--- Runner: SCP completed ---"
 
         # SSH로 서버에 접속하여 배포 스크립트 실행
         ssh -p $SSH_HOST1_PORT $USERNAME@$HOST1 << EOF
+          echo "--- REMOTE SERVER SSH SESSION START ---"
+          echo "--- REMOTE SERVER: Receiving variables from Runner ---"
+          echo "  REMOTE DEPLOY_PATH: $DEPLOY_PATH"
+          echo "  REMOTE JAR_FILENAME: $JAR_FILENAME"
+          echo "  REMOTE NEW_RELEASE_DIR: $NEW_RELEASE_DIR"
+          echo "  REMOTE CURRENT_SYMLINK: $CURRENT_SYMLINK"
+
+          echo "--- REMOTE SERVER: Creating release directory $NEW_RELEASE_DIR ---"
           mkdir -p $NEW_RELEASE_DIR
+          if [ $? -ne 0 ]; then echo "Error on server: Failed to create $NEW_RELEASE_DIR"; exit 1; fi
+          echo "--- REMOTE SERVER: Directory $NEW_RELEASE_DIR created. ---"
+
+          echo "--- REMOTE SERVER: Moving JAR file from $DEPLOY_PATH/$JAR_FILENAME to $NEW_RELEASE_DIR/$JAR_FILENAME ---"
           mv $DEPLOY_PATH/$JAR_FILENAME $NEW_RELEASE_DIR/$JAR_FILENAME
+          if [ $? -ne 0 ]; then echo "Error on server: Failed to move JAR file"; exit 1; fi
+          echo "--- REMOTE SERVER: JAR file moved. ---"
 
-          # 심볼릭 링크 업데이트
-          echo "*** DEPLOY_PATH: $DEPLOY_PATH ***"
-          echo "*** JAR_FILENAME: $JAR_FILENAME ***"
-          echo "*** NEW_RELEASE_DIR: $NEW_RELEASE_DIR ***"
-          echo "*** CURRENT_SYMLINK: $CURRENT_SYMLINK ***"
+          echo "--- REMOTE SERVER: Updating symbolic link ---"
+          echo "  Target (NEW_RELEASE_DIR): $NEW_RELEASE_DIR"
+          echo "  Link Name (CURRENT_SYMLINK): $CURRENT_SYMLINK"
           ln -sfn $NEW_RELEASE_DIR $CURRENT_SYMLINK
+          if [ $? -ne 0 ]; then echo "Error on server: Failed to create/update symbolic link"; exit 1; fi
+          echo "--- REMOTE SERVER: Symbolic link updated successfully. ---"
 
-          # # 기존 자바 프로세스 종료
-          # pgrep -f "java -jar $CURRENT_SYMLINK" | xargs kill -9 || true
+          # 기존 자바 프로세스 종료 (Graceful Shutdown)
+          echo "--- REMOTE SERVER: Checking for existing Java processes with $CURRENT_SYMLINK ---"
+          PID=\$(pgrep -f "java -jar $CURRENT_SYMLINK") # \`pgrep\`은 서버에서 실행되므로 $CURRENT_SYMLINK를 정확히 찾기 위함
+          if [ -n "\$PID" ]; then
+            echo "--- REMOTE SERVER: Found existing process (PID: \$PID). Attempting graceful shutdown (SIGTERM)... ---"
+            kill -15 "\$PID"
+            for i in {1..5}; do
+              if ! kill -0 "\$PID" 2>/dev/null; then
+                echo "--- REMOTE SERVER: Process \$PID terminated gracefully. ---"
+                break
+              fi
+              echo "--- REMOTE SERVER: Waiting for process \$PID to terminate... (\$i/5) ---"
+              sleep 1
+            done
+            if kill -0 "\$PID" 2>/dev/null; then
+              echo "--- REMOTE SERVER: Process \$PID did not terminate gracefully, forcing kill with SIGKILL. ---"
+              kill -9 "\$PID"
+            fi
+          else
+            echo "--- REMOTE SERVER: No existing process found for $CURRENT_SYMLINK ---"
+          fi
 
-          # # 기존 자바 프로세스 종료 (특정 JAR 파일 이름으로 검색)
-          # PID=$(pgrep -f "java -jar $CURRENT_SYMLINK") 
-          # if [ -n "$PID" ]; then
-          #   echo "Killing existing process (PID: $PID) with SIGTERM..."
-          #   kill -15 $PID
-          #   # 5초 대기하며 종료 확인
-          #   for i in {1..5}; do
-          #     if ! kill -0 $PID 2>/dev/null; then
-          #       echo "Process $PID terminated gracefully."
-          #       break
-          #     fi
-          #     sleep 1
-          #   done
-          #   # 5초 후에도 살아있으면 강제 종료
-          #   if kill -0 $PID 2>/dev/null; then
-          #     echo "Process $PID did not terminate gracefully, forcing kill with SIGKILL."
-          #     kill -9 $PID
-          #   fi
-          # else
-          #   echo "No existing process found for $CURRENT_SYMLINK/*"
-          # fi
-
-          # # 새로운 JAR 파일로 서비스 실행
-          # mkdir -p $DEPLOY_PATH/logs
-          # nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
+          # 새로운 JAR 파일로 서비스 실행
+          mkdir -p $DEPLOY_PATH/logs
+          if [ $? -ne 0 ]; then echo "Error on server: Failed to create log directory $DEPLOY_PATH/logs"; exit 1; fi
+          echo "  REMOTE SERVER: Starting application command: nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $LOG_FILE 2>&1 &"
+          nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
+          if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
+          echo "--- REMOTE SERVER: Application started in background (nohup). ---"
+          echo "--- REMOTE SERVER SSH SESSION END ---"
         EOF
+
+        echo "--- DEPLOY JOB END ---"
