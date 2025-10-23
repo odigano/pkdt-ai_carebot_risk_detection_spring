@@ -158,7 +158,7 @@ jobs:
             echo "--- REMOTE SERVER: All old Java processes for $CURRENT_SYMLINK successfully terminated. ---"
           fi
 
-          mkdir -p $DEPLOY_PATH/logs
+          mkdir -p "$DEPLOY_PATH/logs"
           if [ $? -ne 0 ]; then echo "Error on server: Failed to create log directory $DEPLOY_PATH/logs"; exit 1; fi
 
           export DB_URL="$DB_URL"
