@@ -173,7 +173,7 @@ jobs:
           nohup /usr/bin/java -jar $CURRENT_SYMLINK/$JAR_FILENAME > $DEPLOY_PATH/logs/$JAR_FILENAME.log 2>&1 &
           if [ $? -ne 0 ]; then echo "Error on server: Failed to start application"; exit 1; fi
 
-          # 새로운 Java 서비스 실행 확인 (30초 이내)
+          # 새로운 Java 서비스 실행 확인
           echo "--- REMOTE SERVER: Verifying new application started successfully... ---"
           APP_STARTED=false
           for i in {1..3}; do # 5초 간격으로 3번 확인
@@ -195,6 +195,24 @@ jobs:
             echo "--- REMOTE SERVER: New application started successfully. PID: \$NEW_PID ---"
           fi
           echo "--- REMOTE SERVER SSH SESSION END ---"
+
+          echo "--- REMOTE SERVER: Starting old release cleanup ---"
+          CURRENT_RELEASE_TARGET=\$(readlink -f "\$CURRENT_SYMLINK")
+          OLD_RELEASES=\$(ls -dt $DEPLOY_PATH/release/* | grep -v "\$CURRENT_RELEASE_TARGET" | tail -n +$((5 + 1)))
+          if [ -n "\$OLD_RELEASES" ]; then
+            echo "--- REMOTE SERVER: Found old releases to delete: ---"
+            echo "\$OLD_RELEASES"
+            for RELEASE_TO_DELETE in \$OLD_RELEASES; do
+              echo "--- REMOTE SERVER: Deleting old release directory: \$RELEASE_TO_DELETE ---"
+              rm -rf "\$RELEASE_TO_DELETE"
+              if [ $? -ne 0 ]; then
+                echo "Warning: Failed to delete old release directory \$RELEASE_TO_DELETE. Continuing..."
+              fi
+            done
+            echo "--- REMOTE SERVER: Old release cleanup completed. ---"
+          else
+            echo "--- REMOTE SERVER: No old releases found to delete or less than 5 releases. ---"
+          fi
         EOF
 
         echo "--- DEPLOY JOB END ---"
