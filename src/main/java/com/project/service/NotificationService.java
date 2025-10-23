@@ -11,10 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.project.domain.analysis.Risk;
 import com.project.domain.member.Member;
 import com.project.domain.member.Role;
 import com.project.domain.notification.Notification;
 import com.project.domain.notification.NotificationType;
+import com.project.domain.senior.Senior;
 import com.project.dto.response.AnalysisResponseWithIdDto;
 import com.project.dto.response.NotificationResponseDto;
 import com.project.dto.sse.SseNotificationPayload;
@@ -69,6 +71,31 @@ public class NotificationService {
             Notification notification = Notification.builder()
                     .recipient(admin)
                     .notificationType(NotificationType.ANALYSIS_COMPLETE)
+                    .message(message)
+                    .relatedResourceId(resourceId)
+                    .build();
+            notificationRepository.save(notification);
+
+            sendNotificationToUser(admin.getUsername(), "notification", notification);
+        }
+    }
+    
+    @Transactional
+    public void sendStateChangeNotificationToAdmins(Senior senior, Risk previousState, Risk newState, String reason) {
+        List<Member> admins = memberRepository.findByRole(Role.ROLE_ADMIN);
+
+        String message = String.format("'%s'님의 상태가 %s에서 %s로 변경되었습니다. (사유: %s)",
+                senior.getName(),
+                previousState != null ? previousState.name() : "신규",
+                newState.name(),
+                reason);
+        String resourceId = String.valueOf(senior.getId());
+
+        for (Member admin : admins) {
+            if (!admin.isEnabled()) continue;
+            Notification notification = Notification.builder()
+                    .recipient(admin)
+                    .notificationType(NotificationType.SENIOR_STATE_CHANGED)
                     .message(message)
                     .relatedResourceId(resourceId)
                     .build();

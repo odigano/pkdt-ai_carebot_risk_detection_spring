@@ -55,6 +55,8 @@ public class OverallResult {
     private Reason reason;
     
     private String treatmentPlan;
+    
+    private boolean isResolved;
         
     @OneToMany(mappedBy = "overallResult", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Dialogue> dialogues = new ArrayList<>();
@@ -67,6 +69,10 @@ public class OverallResult {
         this.confidenceScores = confidenceScores;
         this.reason = reason;
         this.treatmentPlan = treatmentPlan;
+    }
+    
+    public void resolve() {
+        this.isResolved = true;
     }
     
     public void addDialogue(Dialogue dialogue) {

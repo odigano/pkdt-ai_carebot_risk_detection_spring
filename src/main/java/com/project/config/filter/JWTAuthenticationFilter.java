@@ -38,11 +38,12 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 			throws AuthenticationException {
 		try {
 			Member member = mapper.readValue(request.getInputStream(), Member.class);
+			log.info("로그인 시도: username={}", member.getUsername());
 			Authentication authToken = new UsernamePasswordAuthenticationToken(member.getUsername(),
 					member.getPassword());
 			return authenticationManager.authenticate(authToken);
 		} catch (IOException e) {
-			log.error("JSON 파싱 오류: {}", e.getMessage());
+			log.error("로그인 요청 JSON 파싱 오류: {}", e.getMessage());
 			throw new RuntimeException("잘못된 로그인 요청 형식입니다.", e);
 		}
 	}
@@ -51,9 +52,10 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 	protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain,
 			Authentication authResult) throws IOException, ServletException {
 		User user = (User) authResult.getPrincipal();
-		String accessToken = JWTUtil.getJWT(user.getUsername());
+		String username = user.getUsername();
+		String accessToken = JWTUtil.getJWT(username);
 		response.addHeader(HttpHeaders.AUTHORIZATION, accessToken);
-		String refreshToken = JWTUtil.getRefreshJWT(user.getUsername());
+		String refreshToken = JWTUtil.getRefreshJWT(username);
 		ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
 	            .httpOnly(true)
 	            .path("/")
@@ -63,12 +65,13 @@ public class JWTAuthenticationFilter extends UsernamePasswordAuthenticationFilte
 	            .build();
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 		response.setStatus(HttpStatus.OK.value());
+		log.info("로그인 성공: username={}, Access Token 및 Refresh Token 발급", username);
 	}
 
 	@Override
 	protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException failed) throws IOException, ServletException {
-		log.error("로그인 실패: {}", failed.getMessage());
+		log.warn("로그인 실패: {}", failed.getMessage());
 		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
 		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
 		response.setCharacterEncoding(StandardCharsets.UTF_8.name());

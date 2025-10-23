@@ -40,11 +40,13 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 		String username = JWTUtil.getClaim(jwtToken);
 		Optional<Member> opt = memberRepository.findById(username);
 		if (!opt.isPresent()) {
+			log.warn("JWT 토큰은 유효하나 사용자를 찾을 수 없음: username={}", username);
 			filterChain.doFilter(request, response);
 			return;
 		}
 		Member findmember = opt.get();
 		if (!findmember.isEnabled()) {
+			log.warn("계정이 비활성화된 사용자의 접근 시도: username={}", username);
 		    filterChain.doFilter(request, response);
 		    return;
 		}
@@ -52,7 +54,8 @@ public class JWTAuthorizationFilter extends OncePerRequestFilter {
 				AuthorityUtils.createAuthorityList(findmember.getRole().toString()));
 		Authentication auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
 		SecurityContextHolder.getContext().setAuthentication(auth);
-
+		log.info("JWT 인증 성공, SecurityContext에 사용자 등록: username={}", username);
+		
 		filterChain.doFilter(request, response);
 	}
 }

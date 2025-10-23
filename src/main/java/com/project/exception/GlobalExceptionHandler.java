@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Map<String, String>> handleNoResourceFoundException(NoResourceFoundException ex) {
+    	log.warn("요청 리소스를 찾을 수 없음: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", "요청하신 페이지 또는 리소스를 찾을 수 없습니다."); 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -34,6 +35,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<Map<String, String>> handleHttpRequestMethodNotSupportedException(
         HttpRequestMethodNotSupportedException ex) {
+    	log.warn("지원하지 않는 HTTP 메서드 요청: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", "지원하지 않는 요청 방식입니다. 허용되는 방식은 " + ex.getSupportedHttpMethods() + " 입니다."); 
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(error);
@@ -49,17 +51,19 @@ public class GlobalExceptionHandler {
 	
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-                ex.getBindingResult().getFieldErrors().forEach(error -> {
+    	Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error -> {
             String fieldName = error.getField();
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
+        log.warn("유효성 검사 실패: {}", errors);
         return ResponseEntity.badRequest().body(errors);
     }
     
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleEntityNotFoundException(EntityNotFoundException ex) {
+    	log.warn("요청 엔티티를 찾지 못함: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage()); 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
@@ -67,13 +71,15 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
-        Map<String, String> error = new HashMap<>();
+    	log.warn("잘못된 요청 본문: {}", ex.getMessage());
+    	Map<String, String> error = new HashMap<>();
         error.put("error", "요청 본문(Request Body)의 형식이 잘못되었거나 비어있습니다.");
         return ResponseEntity.badRequest().body(error);
     }
     
     @ExceptionHandler(InvalidFileException.class)
     public ResponseEntity<Map<String, String>> handleInvalidFileException(InvalidFileException ex) {
+    	log.warn("잘못된 파일 요청: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
@@ -81,6 +87,7 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+    	log.warn("부적절한 인자 값으로 인한 충돌: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
@@ -88,6 +95,7 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalStateException(IllegalStateException ex) {
+    	log.warn("부적절한 상태로 인한 충돌: {}", ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
@@ -123,7 +131,7 @@ public class GlobalExceptionHandler {
     
     @ExceptionHandler(PythonApiException.class)
     public ResponseEntity<Map<String, String>> handlePythonApiException(PythonApiException ex) {
-        log.error("Python 분석 서버 API 오류: {}", ex.getMessage());
+    	log.error("Python 분석 서버 API 오류 응답: status={}, message={}", ex.getStatus(), ex.getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage());
         return ResponseEntity.status(ex.getStatus()).body(error);

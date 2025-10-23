@@ -1,6 +1,7 @@
 package com.project.controller;
 
 import java.net.URI;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,10 +23,12 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.project.dto.request.SeniorRequestDto;
 import com.project.dto.request.SeniorSearchCondition;
+import com.project.dto.request.UpdateSeniorStateRequestDto;
 import com.project.dto.response.CustomPageDto;
 import com.project.dto.response.SeniorDetailResponseDto;
 import com.project.dto.response.SeniorListResponseDto;
 import com.project.dto.response.SeniorResponseDto;
+import com.project.dto.response.SeniorStateHistoryResponseDto;
 import com.project.service.SeniorService;
 
 import jakarta.validation.Valid;
@@ -63,6 +67,12 @@ public class SeniorController {
         return ResponseEntity.ok(seniorDetails);
     }
     
+    @GetMapping("/{id}/state-history")
+    public ResponseEntity<List<SeniorStateHistoryResponseDto>> getSeniorStateHistory(@PathVariable Long id) {
+        List<SeniorStateHistoryResponseDto> history = seniorService.getSeniorStateHistory(id);
+        return ResponseEntity.ok(history);
+    }
+    
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<SeniorResponseDto> updateSenior(
             @PathVariable Long id, 
@@ -70,6 +80,14 @@ public class SeniorController {
             @RequestPart(value = "photo", required = false) MultipartFile photo) {
     	SeniorResponseDto senior = seniorService.updateSenior(id, seniorDto, photo);
         return ResponseEntity.ok(senior);
+    }
+    
+    @PostMapping("/{id}/state")
+    public ResponseEntity<Void> updateSeniorState(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateSeniorStateRequestDto requestDto) {
+        seniorService.updateSeniorState(id, requestDto);
+        return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}")

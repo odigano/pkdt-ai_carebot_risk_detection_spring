@@ -14,13 +14,7 @@ public interface SeniorRepository extends JpaRepository<Senior, Long>, SeniorRep
 
 	@Query("SELECT s FROM Senior s LEFT JOIN FETCH s.doll")
 	List<Senior> findAllWithDoll();
-	
-    @Query("SELECT s FROM Senior s " +
-            "LEFT JOIN FETCH s.doll " +
-            "LEFT JOIN FETCH s.overallResults " +
-            "WHERE s.id = :id")
-     Optional<Senior> findDetailsById(Long id);
-    
+	    
     @Query("SELECT s.state, COUNT(s.id) FROM Senior s GROUP BY s.state")
     List<Object[]> countSeniorsByState();
 }

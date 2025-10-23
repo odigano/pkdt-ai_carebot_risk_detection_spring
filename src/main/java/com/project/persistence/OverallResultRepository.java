@@ -21,4 +21,6 @@ public interface OverallResultRepository extends JpaRepository<OverallResult, Lo
             "LEFT JOIN FETCH o.dialogues " +
             "WHERE o.id = :id")
      Optional<OverallResult> findByIdWithDetails(@Param("id") Long id);
+    
+    List<OverallResult> findTop5BySeniorIdOrderByTimestampDesc(Long seniorId);
 }
