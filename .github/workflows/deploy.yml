@@ -132,30 +132,30 @@ jobs:
 
           # 기존 자바 프로세스 종료 (Graceful Shutdown)
           echo "--- REMOTE SERVER: Checking for existing Java processes with $CURRENT_SYMLINK ---"
-          PID=\$(pgrep -f "java -jar $CURRENT_SYMLINK") # \`pgrep\`은 서버에서 실행되므로 $CURRENT_SYMLINK를 정확히 찾기 위함
-          if [ -n "\$PID" ]; then
-            echo "--- REMOTE SERVER: Found existing process (PID: \$PID). Attempting graceful shutdown (SIGTERM)... ---"
-            kill -15 "\$PID"
+          PID=$(pgrep -f "java -jar $CURRENT_SYMLINK")
+          if [ -n "$PID" ]; then
+            echo "--- REMOTE SERVER: Found existing process (PID: $PID). Attempting graceful shutdown (SIGTERM)... ---"
+            kill -15 "$PID"
             for i in {1..5}; do
-              if ! kill -0 "\$PID" 2>/dev/null; then
-                echo "--- REMOTE SERVER: Process \$PID terminated gracefully. ---"
+              if ! kill -0 "$PID" 2>/dev/null; then
+                echo "--- REMOTE SERVER: Process $PID terminated gracefully. ---"
                 break
               fi
-              echo "--- REMOTE SERVER: Waiting for process \$PID to terminate... (\$i/5) ---"
+              echo "--- REMOTE SERVER: Waiting for process $PID to terminate... ($i/5) ---"
               sleep 1
             done
-            if kill -0 "\$PID" 2>/dev/null; then
-              echo "--- REMOTE SERVER: Process \$PID did not terminate gracefully, forcing kill with SIGKILL. ---"
-              kill -9 "\$PID"
+            if kill -0 "$PID" 2>/dev/null; then
+              echo "--- REMOTE SERVER: Process $PID did not terminate gracefully, forcing kill with SIGKILL. ---"
+              kill -9 "$PID"
             fi
           else
             echo "--- REMOTE SERVER: No existing process found for $CURRENT_SYMLINK ---"
           fi
 
           echo "--- REMOTE SERVER: Verifying no old Java processes are running. ---"
-          REMAINING_PIDS=\$(pgrep -f "java -jar $CURRENT_SYMLINK")
-          if [ -n "\$REMAINING_PIDS" ]; then
-            echo "Error on server: Old Java processes still running after termination attempt: \$REMAINING_PIDS"
+          REMAINING_PIDS=$(pgrep -f "java -jar $CURRENT_SYMLINK")
+          if [ -n "$REMAINING_PIDS" ]; then
+            echo "Error on server: Old Java processes still running after termination attempt: $REMAINING_PIDS"
             exit 1
           else
             echo "--- REMOTE SERVER: All old Java processes for $CURRENT_SYMLINK successfully terminated. ---"
@@ -177,36 +177,36 @@ jobs:
           echo "--- REMOTE SERVER: Verifying new application started successfully... ---"
           APP_STARTED=false
           for i in {1..3}; do # 5초 간격으로 3번 확인
-            NEW_PID=\$(pgrep -f "java -jar $CURRENT_SYMLINK")
-            if [ -n "\$NEW_PID" ]; then
-              echo "--- REMOTE SERVER: New application process found (PID: \$NEW_PID) after \$((i*5)) seconds. ---"
+            NEW_PID=$(pgrep -f "java -jar $CURRENT_SYMLINK")
+            if [ -n "$NEW_PID" ]; then
+              echo "--- REMOTE SERVER: New application process found (PID: $NEW_PID) after $((i*5)) seconds. ---"
               APP_STARTED=true
               break
             fi
-            echo "--- REMOTE SERVER: Waiting for new application to start... (\$i/3) ---"
+            echo "--- REMOTE SERVER: Waiting for new application to start... ($i/3) ---"
             sleep 5
           done
 
-          if [ "\$APP_STARTED" = "false" ]; then
+          if [ "$APP_STARTED" = "false" ]; then
             echo "Error on server: New application did not start successfully."
             echo "  Check logs for more details: tail -n 50 $DEPLOY_PATH/logs/$JAR_FILENAME.log"
             exit 1
           else
-            echo "--- REMOTE SERVER: New application started successfully. PID: \$NEW_PID ---"
+            echo "--- REMOTE SERVER: New application started successfully. PID: $NEW_PID ---"
           fi
           echo "--- REMOTE SERVER SSH SESSION END ---"
 
           echo "--- REMOTE SERVER: Starting old release cleanup ---"
-          CURRENT_RELEASE_TARGET=\$(readlink -f "\$CURRENT_SYMLINK")
-          OLD_RELEASES=\$(ls -dt $DEPLOY_PATH/release/* | grep -v "\$CURRENT_RELEASE_TARGET" | tail -n +$((5 + 1)))
-          if [ -n "\$OLD_RELEASES" ]; then
+          CURRENT_RELEASE_TARGET=$(readlink -f "$CURRENT_SYMLINK")
+          OLD_RELEASES=$(ls -dt $DEPLOY_PATH/release/* | grep -v "$CURRENT_RELEASE_TARGET" | tail -n +5)
+          if [ -n "$OLD_RELEASES" ]; then
             echo "--- REMOTE SERVER: Found old releases to delete: ---"
-            echo "\$OLD_RELEASES"
-            for RELEASE_TO_DELETE in \$OLD_RELEASES; do
-              echo "--- REMOTE SERVER: Deleting old release directory: \$RELEASE_TO_DELETE ---"
-              rm -rf "\$RELEASE_TO_DELETE"
+            echo "$OLD_RELEASES"
+            for RELEASE_TO_DELETE in $OLD_RELEASES; do
+              echo "--- REMOTE SERVER: Deleting old release directory: $RELEASE_TO_DELETE ---"
+              rm -rf "$RELEASE_TO_DELETE"
               if [ $? -ne 0 ]; then
-                echo "Warning: Failed to delete old release directory \$RELEASE_TO_DELETE. Continuing..."
+                echo "Warning: Failed to delete old release directory $RELEASE_TO_DELETE. Continuing..."
               fi
             done
             echo "--- REMOTE SERVER: Old release cleanup completed. ---"
