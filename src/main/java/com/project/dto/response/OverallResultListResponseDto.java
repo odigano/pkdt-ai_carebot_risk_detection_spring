@@ -21,11 +21,12 @@ public record OverallResultListResponseDto(
         int age,
         Sex sex,
         String gu,
-        String dong
+        String dong,
+        boolean isResolved
 ) {
     @QueryProjection
     public OverallResultListResponseDto(Long overallResultId, Risk label, String summary, LocalDateTime timestamp, 
-    		String dollId, Long seniorId, String name, LocalDate birthDate, Sex sex, Gu gu, Beopjeongdong dong) {
+    		String dollId, Long seniorId, String name, LocalDate birthDate, Sex sex, Gu gu, Beopjeongdong dong, boolean isResolved) {
         this(
             overallResultId,
             label,
@@ -37,7 +38,8 @@ public record OverallResultListResponseDto(
             Period.between(birthDate, LocalDate.now()).getYears(),
             sex,
             gu.getKoreanName(),
-            dong.getKoreanName()
+            dong.getKoreanName(),
+            isResolved
         );
     }
 }

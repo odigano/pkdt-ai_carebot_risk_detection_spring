@@ -48,7 +48,8 @@ public class OverallResultRepositoryImpl implements OverallResultRepositoryCusto
                         senior.birthDate,
                         senior.sex,
                         senior.address.gu,
-                        senior.address.dong
+                        senior.address.dong,
+                        overallResult.isResolved
                 ))
                 .from(overallResult)
                 .join(overallResult.senior, senior)
@@ -109,7 +110,8 @@ public class OverallResultRepositoryImpl implements OverallResultRepositoryCusto
                         senior.address.dong,
                         overallResult.reason.summary,
                         overallResult.treatmentPlan,
-                        overallResult.timestamp
+                        overallResult.timestamp,
+                        overallResult.isResolved
                 ))
                 .from(overallResult)
                 .join(overallResult.senior, senior)

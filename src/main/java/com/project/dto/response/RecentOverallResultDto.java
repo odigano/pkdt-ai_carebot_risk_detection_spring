@@ -8,14 +8,16 @@ public record RecentOverallResultDto(
         Long id,
         Risk label,
         String summary,
-        LocalDateTime timestamp
+        LocalDateTime timestamp,
+        boolean isResolved
 ) {
     public static RecentOverallResultDto from(OverallResult overallResult) {
         return new RecentOverallResultDto(
                 overallResult.getId(),
                 overallResult.getLabel(),
                 overallResult.getReason().getSummary(),
-                overallResult.getTimestamp()
+                overallResult.getTimestamp(),
+                overallResult.isResolved()
         );
     }
 }

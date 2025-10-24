@@ -19,7 +19,8 @@ public record AnalysisDetailResponseDto(
         List<String> reasons,
         String summary,
         String treatmentPlan,
-
+        boolean isResolved,
+        
         List<DialogueDetailDto> dialogues
 ) {
     public static AnalysisDetailResponseDto from(OverallResult overallResult) {
@@ -44,6 +45,7 @@ public record AnalysisDetailResponseDto(
                 overallResult.getReason().getReasons(),
                 overallResult.getReason().getSummary(),
                 overallResult.getTreatmentPlan(),
+                overallResult.isResolved(),
                 dialogueDtos
         );
     }

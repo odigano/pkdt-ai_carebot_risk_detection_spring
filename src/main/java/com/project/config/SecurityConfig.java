@@ -65,6 +65,8 @@ public class SecurityConfig {
 	private CorsConfigurationSource corsSource() {
 		CorsConfiguration config = new CorsConfiguration();
 		config.addAllowedOrigin("http://localhost:3000");
+		config.addAllowedOrigin("http://dev-web.iptime.org:8000");
+		config.addAllowedOrigin("http://dev-web.iptime.org:80");
 		config.addAllowedMethod(CorsConfiguration.ALL);
 		config.addAllowedHeader(CorsConfiguration.ALL);
 		config.setAllowCredentials(true);
