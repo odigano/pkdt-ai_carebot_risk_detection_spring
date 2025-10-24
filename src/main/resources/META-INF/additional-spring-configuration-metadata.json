@@ -8,5 +8,10 @@
     "name": "senior.photo.upload-path",
     "type": "java.lang.String",
     "description": "시니어 사진 저장 경로"
+  },
+  {
+    "name": "cors.allowed-origins",
+    "type": "java.lang.String",
+    "description": "cors.allowed-origins 리스트"
   }
 ]}
