@@ -1,5 +1,8 @@
 package com.project.config;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
@@ -29,6 +32,9 @@ public class SecurityConfig {
 	private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 	private final MemberRepository memberRepository;
 	private final ObjectMapper objectMapper;
+	
+	@Value("${cors.allowed-origins}")
+	private List<String> allowedOrigins;
 	
 	@Bean
 	PasswordEncoder encoder() {
@@ -64,9 +70,7 @@ public class SecurityConfig {
 
 	private CorsConfigurationSource corsSource() {
 		CorsConfiguration config = new CorsConfiguration();
-		config.addAllowedOrigin("http://localhost:3000");
-		config.addAllowedOrigin("http://dev-web.iptime.org:8000");
-		config.addAllowedOrigin("http://dev-web.iptime.org:80");
+		config.setAllowedOrigins(allowedOrigins);
 		config.addAllowedMethod(CorsConfiguration.ALL);
 		config.addAllowedHeader(CorsConfiguration.ALL);
 		config.setAllowCredentials(true);
