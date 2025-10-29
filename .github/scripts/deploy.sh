@@ -115,4 +115,4 @@ else
   fi
 fi
 
-echo "--- DEPLOYMENT END ---"
+echo "--- DEPLOYMENT END --- "
