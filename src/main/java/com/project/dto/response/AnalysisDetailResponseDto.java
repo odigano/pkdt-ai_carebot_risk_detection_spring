@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public record AnalysisDetailResponseDto(
+		Long seniorId,
         String seniorName,
         String diseases,
         int age,
@@ -20,10 +21,12 @@ public record AnalysisDetailResponseDto(
         String summary,
         String treatmentPlan,
         boolean isResolved,
+        Risk resolvedLabel,
+        boolean isEditable,
         
         List<DialogueDetailDto> dialogues
 ) {
-    public static AnalysisDetailResponseDto from(OverallResult overallResult) {
+    public static AnalysisDetailResponseDto from(OverallResult overallResult, boolean isEditable) {
         ConfidenceScoresDto scoresDto = new ConfidenceScoresDto(
                 overallResult.getConfidenceScores().getPositive(),
                 overallResult.getConfidenceScores().getDanger(),
@@ -36,6 +39,7 @@ public record AnalysisDetailResponseDto(
                 .collect(Collectors.toList());
 
         return new AnalysisDetailResponseDto(
+        		overallResult.getSenior().getId(),
                 overallResult.getSenior().getName(),
                 overallResult.getSenior().getMedicalInfo().getDiseases(),
                 Period.between(overallResult.getSenior().getBirthDate(), LocalDate.now()).getYears(),
@@ -46,6 +50,8 @@ public record AnalysisDetailResponseDto(
                 overallResult.getReason().getSummary(),
                 overallResult.getTreatmentPlan(),
                 overallResult.isResolved(),
+                overallResult.getResolvedLabel(),
+                isEditable,
                 dialogueDtos
         );
     }

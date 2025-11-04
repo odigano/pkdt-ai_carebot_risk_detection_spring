@@ -1,5 +1,6 @@
 package com.project.persistence;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,7 +21,14 @@ public interface OverallResultRepository extends JpaRepository<OverallResult, Lo
             "JOIN FETCH o.doll d " +
             "LEFT JOIN FETCH o.dialogues " +
             "WHERE o.id = :id")
-     Optional<OverallResult> findByIdWithDetails(@Param("id") Long id);
+    Optional<OverallResult> findByIdWithDetails(@Param("id") Long id);
     
     List<OverallResult> findTop5BySeniorIdOrderByTimestampDesc(Long seniorId);
+    
+    boolean existsBySeniorIdAndTimestampAfter(Long seniorId, LocalDateTime timestamp);
+    
+    @Query("SELECT o FROM OverallResult o WHERE o.id IN " +
+           "(SELECT o2.id FROM OverallResult o2 WHERE o2.timestamp = " +
+           "(SELECT MAX(o3.timestamp) FROM OverallResult o3 WHERE o3.senior = o2.senior))")
+    List<OverallResult> findLatestOverallResultForEachSenior();
 }

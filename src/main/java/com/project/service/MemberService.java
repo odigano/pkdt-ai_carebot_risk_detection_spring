@@ -3,6 +3,7 @@ package com.project.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.project.domain.member.Member;
 import com.project.domain.member.Role;
 import com.project.dto.MemberDto;
+import com.project.dto.request.MemberUpdateRequestDto;
 import com.project.dto.request.SignUpRequestDto;
 import com.project.persistence.MemberRepository;
 
@@ -52,29 +54,41 @@ public class MemberService {
     }
 
     @Transactional(readOnly = true)
-    public MemberDto findMemberByUsername(String username) {
+    public MemberDto findMemberByUsernameToDto(String username) {
     	log.info("특정 회원 정보 조회: username={}", username);
-        Member member = memberRepository.findByUsername(username)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + username));
+        Member member = findMemberByUsername(username);
         return new MemberDto(member);
     }
-
+    @PreAuthorize("#username == authentication.name or 'admin' == authentication.name")
     @Transactional
-    public MemberDto updateMember(String username, MemberDto requestDto) {
+    public MemberDto updateMember(String username, MemberUpdateRequestDto requestDto) {
     	log.info("회원 정보 수정 시도: username={}, role={}, enabled={}", username, requestDto.role(), requestDto.enabled());
-        Member member = memberRepository.findByUsername(username)
-        		.orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + username));;
+        Member member = findMemberByUsername(username);
         member.update(requestDto.role(), requestDto.enabled());
         log.info("회원 정보 수정 완료: username={}", username);
         return new MemberDto(member);
     }
+    @PreAuthorize("#username == authentication.name or 'admin' == authentication.name")
+    @Transactional
+    public void changePassword(String username, String newPassword) {
+        log.info("비밀번호 변경 시도: username={}", username);
+        Member member = findMemberByUsername(username);
+        member.updatePassword(encoder.encode(newPassword));
+        log.info("비밀번호 변경 완료: username={}", username);
+    }
 
     @Transactional
+    @PreAuthorize("'admin' == authentication.name")
     public void deleteMember(String username) {
     	log.info("회원 삭제 시도: username={}", username);
         if (!memberRepository.existsByUsername(username))
             throw new EntityNotFoundException("사용자를 찾을 수 없습니다: " + username);
         memberRepository.deleteById(username);
         log.info("회원 삭제 완료: username={}", username);
+    }
+    
+    private Member findMemberByUsername(String username) {
+        return memberRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + username));
     }
 }

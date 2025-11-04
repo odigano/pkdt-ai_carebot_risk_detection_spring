@@ -139,4 +139,16 @@ public class NotificationService {
                 .orElseThrow(() -> new EntityNotFoundException("ID " + notificationId + "인 알림 없음"));
         notification.markAsRead();
     }
+    
+    @Transactional
+    public void markAllAsRead(String username) {
+        notificationRepository.markAllAsReadByUsername(username);
+        log.info("사용자 '{}'의 모든 알림 읽음 처리 완료", username);
+    }
+
+    @Transactional
+    public void deleteAllNotifications(String username) {
+        notificationRepository.deleteAllByUsername(username);
+        log.info("사용자 '{}'의 모든 알림 삭제 완료", username);
+    }
 }

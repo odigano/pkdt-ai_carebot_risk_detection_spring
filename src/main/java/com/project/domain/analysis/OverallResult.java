@@ -57,6 +57,9 @@ public class OverallResult {
     private String treatmentPlan;
     
     private boolean isResolved;
+    
+    @Enumerated(EnumType.STRING)
+    private Risk resolvedLabel;
         
     @OneToMany(mappedBy = "overallResult", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Dialogue> dialogues = new ArrayList<>();
@@ -71,8 +74,9 @@ public class OverallResult {
         this.treatmentPlan = treatmentPlan;
     }
     
-    public void resolve() {
+    public void resolveWithLabel(Risk resolvedLabel) {
         this.isResolved = true;
+        this.resolvedLabel = resolvedLabel;
     }
     
     public void addDialogue(Dialogue dialogue) {

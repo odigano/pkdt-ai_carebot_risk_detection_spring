@@ -200,7 +200,14 @@ public class AnalyzeService {
         OverallResult overallResult = overallResultRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new EntityNotFoundException("ID: " + id + " 분석을 찾을 수 없습니다."));
         
-        return AnalysisDetailResponseDto.from(overallResult);
+        boolean hasNewerResult = overallResultRepository.existsBySeniorIdAndTimestampAfter(
+                overallResult.getSenior().getId(), 
+                overallResult.getTimestamp()
+        );
+
+        boolean isEditable = !hasNewerResult;
+        
+        return AnalysisDetailResponseDto.from(overallResult, isEditable);
     }
     
     @Transactional

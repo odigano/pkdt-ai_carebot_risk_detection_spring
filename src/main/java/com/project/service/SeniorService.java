@@ -144,17 +144,18 @@ public class SeniorService {
 	    Senior senior = seniorRepository.findById(seniorId)
 	            .orElseThrow(() -> new EntityNotFoundException("시니어 " + seniorId + "는 없음."));
 
+	    Risk newState = requestDto.newState();
+	    
 	    if (requestDto.overallResultId() != null) {
             OverallResult overallResult = overallResultRepository.findById(requestDto.overallResultId())
                     .orElseThrow(() -> new EntityNotFoundException("분석 ID " + requestDto.overallResultId() + "를 찾을 수 없습니다."));
             if (!overallResult.getSenior().getId().equals(seniorId))
                 throw new IllegalArgumentException("해당 분석 결과는 senior ID " + seniorId + "에 속하지 않습니다.");
-            overallResult.resolve();
+            overallResult.resolveWithLabel(newState);
             log.info("분석 ID {}가 조치 완료 처리되었습니다.", requestDto.overallResultId());
         }
 	    
 	    Risk previousState = senior.getState();
-	    Risk newState = requestDto.newState();
 
 	    if (previousState != newState) {
 	        senior.updateState(newState);
@@ -247,6 +248,8 @@ public class SeniorService {
         		.detail(dto.addressDetail())
         		.gu(dto.gu())
         		.dong(dto.dong())
+                .latitude(dto.latitude())
+                .longitude(dto.longitude())
         		.build();
     }
 	

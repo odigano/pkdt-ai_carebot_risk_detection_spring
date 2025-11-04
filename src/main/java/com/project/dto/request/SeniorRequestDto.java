@@ -40,6 +40,10 @@ public record SeniorRequestDto(
 		Gu gu,
 		@NotNull(message = "동 정보는 필수입니다.")
 		Beopjeongdong dong,
+        @NotNull(message = "위도는 필수입니다.")
+        Double latitude,
+        @NotNull(message = "경도는 필수입니다.")
+        Double longitude,
 		
 		String note, 
 		

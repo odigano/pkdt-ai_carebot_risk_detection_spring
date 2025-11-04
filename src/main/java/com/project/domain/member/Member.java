@@ -31,8 +31,14 @@ public class Member {
         this.enabled = enabled;
     }
 	
-	public void update(Role role, boolean enabled) {
-        this.role = role;
-        this.enabled = enabled;
+	public void update(Role role, Boolean enabled) {
+        if (role != null)
+            this.role = role;
+        if (enabled != null)
+            this.enabled = enabled;
+    }
+	
+    public void updatePassword(String newPassword) {
+        this.password = newPassword;
     }
 }

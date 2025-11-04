@@ -37,4 +37,18 @@ public class NotificationController {
         notificationService.markAsRead(notificationId);
         return ResponseEntity.ok().build();
     }
+    
+    @PutMapping("/read-all")
+    public ResponseEntity<Void> markAllAsRead() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        notificationService.markAllAsRead(username);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllNotifications() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        notificationService.deleteAllNotifications(username);
+        return ResponseEntity.noContent().build();
+    }
 }

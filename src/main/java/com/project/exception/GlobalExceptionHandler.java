@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -48,7 +49,15 @@ public class GlobalExceptionHandler {
         error.put("error", "인증에 실패했습니다. 유효하지 않거나 만료된 토큰입니다."); 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
-	
+    
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleAccessDeniedException(AccessDeniedException ex) {
+        log.warn("권한 없는 접근 시도: {}", ex.getMessage());
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "해당 리소스에 접근할 권한이 없습니다.");
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+    
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
     	Map<String, String> errors = new HashMap<>();
