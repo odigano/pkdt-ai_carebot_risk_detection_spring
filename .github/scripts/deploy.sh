@@ -101,7 +101,7 @@ if [ -z "$CURRENT_RELEASE_TARGET" ]; then
   echo "Warning: Could not determine current release target for cleanup. Skipping old release cleanup."
 else
   # 최신 5개를 제외한 나머지 목록 (readlink -f 결과와 동일한 경로로 필터링)
-  OLD_RELEASES=$(ls -dt "$REMOTE_DEPLOY_PATH/release/"* 2>/dev/null | head -n -5 | grep -v "$CURRENT_RELEASE_TARGET")
+  OLD_RELEASES=$(ls -dt "$REMOTE_DEPLOY_PATH/release/"* 2>/dev/null | tac | head -n -5 | grep -v "$CURRENT_RELEASE_TARGET")
   if [ -n "$OLD_RELEASES" ]; then
     echo "Old releases to delete:"
     echo "$OLD_RELEASES"
