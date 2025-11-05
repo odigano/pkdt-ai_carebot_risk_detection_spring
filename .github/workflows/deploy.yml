@@ -101,4 +101,4 @@ jobs:
         ssh -p $SSH_HOST2_PORT $USERNAME@$HOST2 "bash \"$REMOTE_SCRIPT_PATH\" \"$DEPLOY_PATH\" \"$JAR_FILENAME\" \"${{ secrets.DB_URL }}\" \"${{ secrets.DB_USERNAME }}\" \"${{ secrets.DB_PASSWORD }}\""
         if [ $? -ne 0 ]; then echo "Error: Remote deploy script failed from host2"; exit 1; fi
         
-        echo "--- DEPLOY JOB END --- "
+        echo "--- DEPLOY JOB END ---"
